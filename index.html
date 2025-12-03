@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>南宁青秀区3D交通流量预测系统</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.min.js"></script>
+    
+    <!-- 自定义CSS -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- 登录页面 -->
+    <div class="login-container" id="login-page">
+        <div class="login-card">
+            <div class="text-center mb-4">
+                <i class="fas fa-traffic-light fa-3x text-primary mb-3"></i>
+                <h2>南宁青秀区3D交通预测系统</h2>
+                <p class="text-muted">请输入您的凭据登录系统</p>
+            </div>
+            <form id="login-form">
+                <div class="mb-3">
+                    <label for="username" class="form-label">用户名</label>
+                    <input type="text" class="form-control" id="username" placeholder="请输入用户名" required>
+                </div>
+                <div class="mb-3">
+                    <label for="password" class="form-label">密码</label>
+                    <input type="password" class="form-control" id="password" placeholder="请输入密码" required>
+                </div>
+                <div class="mb-3 form-check">
+                    <input type="checkbox" class="form-check-input" id="remember">
+                    <label class="form-check-label" for="remember">记住我</label>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">登录</button>
+            </form>
+            <div class="mt-3 text-center">
+                <p class="text-muted">演示账号: admin / 密码: 123456</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 主应用页面 -->
+    <div class="main-container" id="main-app">
+        <!-- 导航栏 -->
+        <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
+            <div class="container">
+                <a class="navbar-brand" href="#">
+                    <i class="fas fa-traffic-light me-2"></i>
+                    青秀区3D交通流量预测系统
+                </a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav me-auto">
+                        <li class="nav-item">
+                            <a class="nav-link active" href="#" data-tab="realtime">实时数据</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-tab="history">历史数据</a>
+                        </li>
+                    </ul>
+                    <ul class="navbar-nav ms-auto">
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-user-circle me-1"></i> 管理员
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i> 设置</a></li>
+                                <li><a class="dropdown-item" href="#"><i class="fas fa-question-circle me-2"></i> 帮助</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="#" id="logout-btn"><i class="fas fa-sign-out-alt me-2"></i> 退出登录</a></li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+
+        <div class="container-fluid mt-3">
+            <!-- 实时数据页面 -->
+            <div class="tab-content" id="realtime-tab">
+                <!-- 页面标题和说明 -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h2 class="mb-2">南宁市青秀区实时3D交通流量</h2>
+                        <p class="text-muted">基于实时监测数据，展示当前交通状况和未来预测</p>
+                    </div>
+                </div>
+
+                <!-- 交互控制区域 -->
+                <div class="row">
+                    <div class="col-12">
+                        <div class="interactive-controls">
+                            <div class="row">
+                                <div class="col-md-3 filter-section">
+                                    <label for="time-range" class="form-label">时间范围</label>
+                                    <select class="form-select" id="time-range">
+                                        <option value="realtime">实时数据</option>
+                                        <option value="morning">早高峰 (7:00-9:00)</option>
+                                        <option value="noon">午间 (11:00-13:00)</option>
+                                        <option value="evening">晚高峰 (17:00-19:00)</option>
+                                        <option value="night">夜间 (20:00-22:00)</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3 filter-section">
+                                    <label for="road-filter" class="form-label">道路筛选</label>
+                                    <select class="form-select" id="road-filter">
+                                        <option value="all">所有道路</option>
+                                        <option value="highway">主干道</option>
+                                        <option value="secondary">次干道</option>
+                                        <option value="local">支路</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3 filter-section">
+                                    <label for="status-filter" class="form-label">状态筛选</label>
+                                    <select class="form-select" id="status-filter">
+                                        <option value="all">所有状态</option>
+                                        <option value="smooth">畅通</option>
+                                        <option value="slow">缓行</option>
+                                        <option value="congested">拥堵</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3 filter-section">
+                                    <label for="view-mode" class="form-label">视图模式</label>
+                                    <select class="form-select" id="view-mode">
+                                        <option value="day">白天模式</option>
+                                        <option value="night">夜间模式</option>
+                                        <option value="traffic">交通流量模式</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-12 time-slider-container">
+                                    <label for="time-slider" class="form-label">时间轴: <span id="time-slider-value">当前</span></label>
+                                    <input type="range" class="form-range" id="time-slider" min="0" max="24" value="12">
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-12">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="auto-refresh" checked>
+                                        <label class="form-check-label" for="auto-refresh">自动刷新数据</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 交通概览卡片 -->
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="card">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">畅通路段</h5>
+                                <h2 class="text-success" id="smooth-count">12</h2>
+                                <p class="text-muted">较昨日 <span class="text-success" id="smooth-change">+2</span></p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">缓行路段</h5>
+                                <h2 class="text-warning" id="slow-count">8</h2>
+                                <p class="text-muted">较昨日 <span class="text-danger" id="slow-change">-1</span></p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">拥堵路段</h5>
+                                <h2 class="text-danger" id="congested-count">5</h2>
+                                <p class="text-muted">较昨日 <span class="text-danger" id="congested-change">+2</span></p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">平均时速</h5>
+                                <h2 class="text-primary" id="avg-speed">38.5</h2>
+                                <p class="text-muted">公里/小时</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3D地图和预测图表 -->
+                <div class="row mt-4">
+                    <div class="col-lg-8">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <span>青秀区3D交通实时地图</span>
+                                <span class="last-updated">最后更新: <span id="update-time">刚刚</span></span>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="map-container">
+                                    <div id="three-container"></div>
+                                    <div class="traffic-flow-layer" id="traffic-flow-layer"></div>
+                                    
+                                    <!-- 道路选择器 -->
+                                    <div class="road-selector-container" id="road-selector">
+                                        <div class="road-selector-header">
+                                            <span>道路选择</span>
+                                            <button class="road-selector-toggle" id="road-selector-toggle">
+                                                <i class="fas fa-chevron-down"></i>
+                                            </button>
+                                        </div>
+                                        <div class="road-selector-list" id="road-list">
+                                            <!-- 道路列表将通过JavaScript动态生成 -->
+                                        </div>
+                                        <div class="selected-road-info" id="selected-road-info" style="display: none;">
+                                            <h6 id="selected-road-name">道路名称</h6>
+                                            <div class="road-details">
+                                                <div class="road-detail-item">
+                                                    <div class="road-detail-value" id="selected-road-speed">40 km/h</div>
+                                                    <div>平均速度</div>
+                                                </div>
+                                                <div class="road-detail-item">
+                                                    <div class="road-detail-value" id="selected-road-congestion">2.5</div>
+                                                    <div>拥堵指数</div>
+                                                </div>
+                                                <div class="road-detail-item">
+                                                    <div class="road-detail-value" id="selected-road-status">畅通</div>
+                                                    <div>当前状态</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="view-controls">
+                                        <button class="btn btn-sm btn-light" id="reset-view">
+                                            <i class="fas fa-crosshairs"></i> 重置视角
+                                        </button>
+                                        <button class="btn btn-sm btn-light" id="toggle-traffic">
+                                            <i class="fas fa-car"></i> 显示交通流
+                                        </button>
+                                    </div>
+                                    <div class="map-controls">
+                                        <button class="btn btn-sm btn-light" id="zoom-in">
+                                            <i class="fas fa-search-plus"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-light" id="zoom-out">
+                                            <i class="fas fa-search-minus"></i>
+                                        </button>
+                                    </div>
+                                    <div class="map-legend">
+                                        <div class="legend-item">
+                                            <div class="status-indicator status-smooth me-1"></div>
+                                            <span>畅通</span>
+                                        </div>
+                                        <div class="legend-item">
+                                            <div class="status-indicator status-slow me-1"></div>
+                                            <span>缓行</span>
+                                        </div>
+                                        <div class="legend-item">
+                                            <div class="status-indicator status-congested me-1"></div>
+                                            <span>拥堵</span>
+                                        </div>
+                                    </div>
+                                    <div class="time-of-day" id="time-display">12:00 中午</div>
+                                    <div class="building-info" id="building-info">
+                                        <h6 id="building-name">建筑名称</h6>
+                                        <p class="mb-1" id="building-type">类型: 商业</p>
+                                        <p class="mb-1" id="building-height">高度: 120米</p>
+                                        <p class="mb-0" id="building-address">地址: 民族大道</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-4">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <span>未来2小时交通预测</span>
+                                <div class="chart-controls">
+                                    <button class="btn btn-sm btn-outline-secondary" id="reset-zoom">
+                                        <i class="fas fa-expand-arrows-alt"></i> 重置缩放
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="prediction-chart" height="300"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 交通数据表格 -->
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <span>主要道路交通状况</span>
+                                <div>
+                                    <button class="btn btn-sm btn-outline-secondary me-2" id="refresh-btn">
+                                        <i class="fas fa-sync-alt me-1"></i> 刷新
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-primary" id="reset-road-selection">
+                                        <i class="fas fa-undo me-1"></i> 重置选择
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-hover data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>道路名称</th>
+                                                <th>道路等级</th>
+                                                <th>当前状态</th>
+                                                <th>平均车速</th>
+                                                <th>拥堵指数</th>
+                                                <th>1小时后预测</th>
+                                                <th>2小时后预测</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="traffic-data">
+                                            <!-- 数据将通过JavaScript动态生成 -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="pagination-controls">
+                                    <nav>
+                                        <ul class="pagination pagination-sm" id="pagination">
+                                            <!-- 分页控件将通过JavaScript动态生成 -->
+                                        </ul>
+                                    </nav>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 历史数据页面 -->
+            <div class="tab-content" id="history-tab" style="display: none;">
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h2 class="mb-2">南宁市青秀区历史交通数据分析</h2>
+                        <p class="text-muted">基于历史数据，分析交通流量趋势和模式</p>
+                    </div>
+                </div>
+
+                <!-- 历史数据控制区域 -->
+                <div class="row">
+                    <div class="col-12">
+                        <div class="interactive-controls history-controls">
+                            <div class="row">
+                                <div class="col-md-4 filter-section">
+                                    <label for="history-period" class="form-label">时间周期</label>
+                                    <select class="form-select" id="history-period">
+                                        <option value="24h">过去24小时</option>
+                                        <option value="7d">过去7天</option>
+                                        <option value="30d">过去30天</option>
+                                        <option value="3m">过去3个月</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4 filter-section">
+                                    <label for="history-road" class="form-label">道路选择</label>
+                                    <select class="form-select" id="history-road">
+                                        <option value="all">所有道路</option>
+                                        <option value="highway">主干道</option>
+                                        <option value="secondary">次干道</option>
+                                        <option value="local">支路</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4 filter-section">
+                                    <label for="history-metric" class="form-label">指标选择</label>
+                                    <select class="form-select" id="history-metric">
+                                        <option value="congestion">拥堵指数</option>
+                                        <option value="speed">平均车速</option>
+                                        <option value="volume">交通流量</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-12">
+                                    <button class="btn btn-primary" id="apply-history-filters">
+                                        <i class="fas fa-chart-line me-1"></i> 应用筛选
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 历史数据图表 -->
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                历史交通趋势分析
+                            </div>
+                            <div class="card-body">
+                                <div class="history-chart-container">
+                                    <canvas id="history-chart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 历史数据统计 -->
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                交通状况统计
+                            </div>
+                            <div class="card-body">
+                                <canvas id="history-stats-chart" height="250"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                高峰时段分析
+                            </div>
+                            <div class="card-body">
+                                <canvas id="peak-hours-chart" height="250"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 工具提示 -->
+    <div class="tooltip" id="map-tooltip"></div>
+
+    <!-- Bootstrap Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- 自定义JavaScript文件 -->
+    <script src="three-scene.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
